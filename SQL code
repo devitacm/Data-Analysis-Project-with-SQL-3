@@ -1,0 +1,88 @@
+#Show a list of products that have prices between 50,000 and 150,000
+SELECT * FROM ms_produk WHERE harga BETWEEN 50000 AND 150000;
+
+#Show a list of products’ name contain the word “Flashdisk”
+SELECT * FROM ms_produk WHERE nama_produk LIKE '%Flashdisk%';
+
+#Show only the names of customers who only have the following titles: S.H, Ir. and Drs.
+SELECT * 
+FROM ms_pelanggan 
+WHERE nama_pelanggan LIKE '%S.H%' 
+OR nama_pelanggan LIKE '%Ir.%' 
+OR nama_pelanggan LIKE '%Drs.%';
+
+#Show the names of customers and sort the results by the column nama_pelanggan from the smallest to the largest (A to Z)
+SELECT nama_pelanggan FROM ms_pelanggan ORDER BY nama_pelanggan ASC;
+
+#Show the names of the customers and sort the results by the column nama_pelanggan from the smallest to the largest (A to Z), but the title should not be part of the sequence. Example: Ir. Agus Nugraha should be above Heidi Goh
+SELECT nama_pelanggan 
+FROM ms_pelanggan 
+ORDER BY CASE WHEN LEFT (nama_pelanggan,3) = 'Ir.' 
+THEN SUBSTRING(nama_pelanggan,5) 
+ELSE nama_pelanggan END ASC;
+
+#Show the name of the customer who has the longest name
+SELECT nama_pelanggan 
+FROM ms_pelanggan 
+WHERE LENGTH(nama_pelanggan) IN (
+SELECT MAX(LENGTH(nama_pelanggan)) FROM ms_pelanggan);
+
+#Show the name of the person who has the longest name (on the top row), and who has the shortest name (on the row after it). The title became part of the name
+SELECT nama_pelanggan 
+FROM ms_pelanggan 
+WHERE LENGTH(nama_pelanggan) IN (
+SELECT MAX(LENGTH(nama_pelanggan)) FROM ms_pelanggan) 
+OR LENGTH(nama_pelanggan) IN (
+SELECT MIN(LENGTH(nama_pelanggan)) FROM ms_pelanggan) 
+ORDER BY LENGTH(nama_pelanggan) DESC;
+
+#Show the most sold products in terms of quantity
+SELECT
+	tr_penjualan_detail.kode_produk, 
+	ms_produk.nama_produk,
+	SUM(tr_penjualan_detail.qty) AS total_qty 
+FROM tr_penjualan_detail 
+INNER JOIN ms_produk 
+ON tr_penjualan_detail.kode_produk = ms_produk.kode_produk 
+GROUP BY kode_produk, nama_produk 
+ORDER BY total_qty DESC 
+LIMIT 2;
+
+#Show the name of customer who spends the most money on shopping
+SELECT 
+	tr_penjualan.kode_pelanggan, 
+	ms_pelanggan.nama_pelanggan, 
+	SUM(tr_penjualan_detail.qty*tr_penjualan_detail.harga_satuan) AS total_harga 
+FROM tr_penjualan_detail 
+INNER JOIN tr_penjualan 
+ON tr_penjualan_detail.kode_transaksi = tr_penjualan.kode_transaksi 
+INNER JOIN ms_pelanggan 
+ON tr_penjualan.kode_pelanggan = ms_pelanggan.kode_pelanggan 
+GROUP BY kode_pelanggan, nama_pelanggan 
+ORDER BY total_harga DESC 
+LIMIT 1;
+
+#Show a list of customers who have never made a transaction
+SELECT kode_pelanggan, nama_pelanggan, alamat
+FROM ms_pelanggan
+WHERE kode_pelanggan NOT IN (SELECT kode_pelanggan FROM tr_penjualan)
+GROUP BY kode_pelanggan, nama_pelanggan, alamat;
+
+#Show transactions that have a number of product items of more than 1 type of product
+SELECT 
+	tr_penjualan_detail.kode_transaksi, 
+	tr_penjualan.kode_pelanggan, 
+	ms_pelanggan.nama_pelanggan, 
+	tr_penjualan.tanggal_transaksi, 
+	COUNT(tr_penjualan_detail.kode_produk) AS jumlah_detail
+FROM tr_penjualan_detail 
+JOIN tr_penjualan 
+ON tr_penjualan_detail.kode_transaksi = tr_penjualan.kode_transaksi 
+JOIN ms_pelanggan 
+ON tr_penjualan.kode_pelanggan = ms_pelanggan.kode_pelanggan
+GROUP BY 
+	tr_penjualan_detail.kode_transaksi, 
+	tr_penjualan.kode_pelanggan,
+	ms_pelanggan.nama_pelanggan, 
+	tr_penjualan.tanggal_transaksi
+HAVING COUNT(tr_penjualan_detail.kode_produk)>1;
